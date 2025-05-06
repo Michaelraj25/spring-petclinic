@@ -1,26 +1,39 @@
 trigger:
   branches:
     include:
-      - main  # Run this pipeline on every push to main
-
-pool:
-  name: Default  # Uses the self-hosted EC2 agent
+      - main
 
 variables:
   imageName: 'spring-petclinic'
-  dockerHubNamespace: 'michaelstev25'  # ⬅️ Replace with your Docker Hub username
-  tag: '$(Build.BuildId)'  # Unique build ID
+  dockerHubId: '<michaelstev25>'
+
+pool:
+  vmImage: 'defauly'
 
 steps:
-- checkout: self  # Pull latest code
+  - task: Maven@3
+    inputs:
+      mavenPomFile: 'pom.xml'
+      goals: 'clean install'
+    displayName: 'Build with Maven'
 
-- task: Docker@2
-  inputs:
-    containerRegistry: 'DockerHubServiceConnection'  # Name of your Docker Hub service connection
-    repository: '$(dockerHubNamespace)/$(imageName)'
-    command: 'buildAndPush'
-    Dockerfile: '.devcontainer/Dockerfile'  # Correct path to Dockerfile
-    tags: |
-      $(tag)
-      latest
+  - task: Docker@2
+    inputs:
+      containerRegistry: '<docker-service-connection>'
+      repository: '$(dockerHubId)/$(imageName)'
+      command: 'buildAndPush'
+      Dockerfile: '**/Dockerfile'
+      tags: |
+        latest
+    displayName: 'Build and Push Docker Image'
+
+  - task: SSH@0
+    inputs:
+      sshEndpoint: 'AzureVM-SSH'
+      runOptions: 'commands'
+      commands: |
+        docker pull $(dockerHubId)/$(imageName):latest
+        docker stop petclinic || true && docker rm petclinic || true
+        docker run -d -p 8080:8080 --name petclinic $(dockerHubId)/$(imageName):latest
+    displayName: 'Deploy on Azure VM'
 
