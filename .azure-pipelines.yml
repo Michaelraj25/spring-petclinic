@@ -1,0 +1,26 @@
+trigger:
+  branches:
+    include:
+      - main  # Run this pipeline on every push to main
+
+pool:
+  name: Default  # Uses the self-hosted EC2 agent you registered under the 'Default' agent pool
+
+variables:
+  imageName: 'spring-petclinic'
+  dockerHubNamespace: 'michaelstev25'  # ⬅️ Replace this with your Docker Hub username
+  tag: '$(Build.BuildId)'  # Unique build ID
+
+steps:
+- checkout: self  # Tells the agent to pull the latest code from GitHub
+
+- task: Docker@2
+  inputs:
+    containerRegistry: 'DockerHubServiceConnection'  # ⬅️ You must create this service connection in Azure DevOps
+    repository: '$(dockerHubNamespace)/$(imageName)'  # Final image name like: yourname/spring-petclinic
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'  # Looks for Dockerfile in the repo (in any folder)
+    tags: |
+      $(tag)
+      latest
+  
