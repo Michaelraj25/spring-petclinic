@@ -8,7 +8,7 @@ variables:
   dockerHubId: '<michaelstev25>'
 
 pool:
-  vmImage: 'defauly'
+  vmImage: 'default'
 
 steps:
   - task: Maven@3
